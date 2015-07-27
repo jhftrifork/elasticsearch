@@ -1,0 +1,53 @@
+apply plugin: 'application'
+apply plugin: 'com.github.johnrengelman.shadow'
+
+mainClassName = "org.apache.mesos.elasticsearch.configuration.Main"
+ext {
+    imageName = imagePrefix + '/elasticsearch-configuration'
+}
+
+buildscript {
+    repositories {
+        jcenter()
+    }
+    dependencies {
+        classpath 'com.github.jengelman.gradle.plugins:shadow:1.2.1'
+    }
+}
+
+repositories {
+    maven {
+        url "https://jitpack.io"
+    }
+}
+
+dependencies {
+    compile project(':commons')
+    compile "log4j:log4j:1.2.16"
+    compile("org.springframework.boot:spring-boot-starter-web:1.2.4.RELEASE")
+    compile("org.springframework.boot:spring-boot-starter-log4j:1.2.4.RELEASE")
+}
+
+shadowJar {
+    baseName = "elasticsearch-mesos-configuration"
+    mergeServiceFiles()
+    classifier = ''
+}
+
+task taskCopyFilesForDocker(type: Copy) {
+    dependsOn "copyShellScript", "copyJar"
+}
+
+task copyJar(type: Copy) {
+    dependsOn 'shadowJar'
+    from { getTasksByName("shadowJar", false)[0].outputs.files[0] } // Get outputs from task "jar"
+    into        'build/docker'
+    rename { String fileName ->
+        fileName.replace("-${project.version}", "")
+    }
+}
+
+task copyShellScript(type: Copy) {
+    from        "start-executor.sh"
+    into        'build/docker'
+}
