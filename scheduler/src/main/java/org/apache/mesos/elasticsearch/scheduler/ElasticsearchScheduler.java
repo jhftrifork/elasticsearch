@@ -6,6 +6,8 @@ import org.apache.mesos.Protos;
 import org.apache.mesos.Scheduler;
 import org.apache.mesos.SchedulerDriver;
 import org.apache.mesos.elasticsearch.common.Discovery;
+import org.apache.mesos.elasticsearch.scheduler.tasks.ConfigurationWebserverTaskInfoFactory;
+
 import java.net.InetSocketAddress;
 import java.util.*;
 
@@ -78,6 +80,9 @@ public class ElasticsearchScheduler implements Scheduler {
     @Override
     public void resourceOffers(SchedulerDriver driver, List<Protos.Offer> offers) {
         for (Protos.Offer offer : offers) {
+            if (offerToWebserver(driver, offer)) {
+                continue;
+            }
             if (isHostAlreadyRunningTask(offer)) {
                 driver.declineOffer(offer.getId()); // DCOS certification 05
                 LOGGER.info("Declined offer: Host " + offer.getHostname() + " is already running an Elastisearch task");
@@ -114,24 +119,72 @@ public class ElasticsearchScheduler implements Scheduler {
         }
     }
 
+    private boolean offerToWebserver(SchedulerDriver driver, Protos.Offer offer) {
+        Boolean retval = false;
+        if (isHostAlreadyRunningTask(offer)) {
+            LOGGER.info("Webserver declined offer: Host " + offer.getHostname() + " is already running an webserver task");
+        } else if (!containsOnePorts(offer.getResourcesList())) {
+            LOGGER.info("Webserver declined offer: Offer did not contain 1 ports for webserver.");
+        } else if (!isEnoughCPU(offer.getResourcesList(), 0.1)) {
+            LOGGER.info("Webserver declined offer: Not enough CPU resources");
+        } else if (!isEnoughRAM(offer.getResourcesList(), 64)) {
+            LOGGER.info("Webserver declined offer: Not enough RAM resources");
+        } else if (!isEnoughDisk(offer.getResourcesList(), 0)) {
+            LOGGER.info("Webserver declined offer: Not enough Disk resources");
+        } else {
+            LOGGER.info("Accepted offer: " + offer.getHostname());
+            Protos.TaskInfo taskInfo = new ConfigurationWebserverTaskInfoFactory().createWebserverTask(configuration, offer);
+            LOGGER.debug(taskInfo.toString());
+            driver.launchTasks(Collections.singleton(offer.getId()), Collections.singleton(taskInfo));
+            Task task = new Task(
+                    offer.getHostname(),
+                    taskInfo.getTaskId().getValue(),
+                    Protos.TaskState.TASK_STAGING,
+                    clock.zonedNow(),
+                    new InetSocketAddress(offer.getHostname(), taskInfo.getDiscovery().getPorts().getPorts(Discovery.WEBSERVER_PORT_INDEX).getNumber()),
+                    null
+            );
+            tasks.put(taskInfo.getTaskId().getValue(), task);
+            retval = true;
+        }
+        return retval;
+    }
+
     private boolean isEnoughDisk(List<Protos.Resource> resourcesList) {
-        ResourceCheck resourceCheck = new ResourceCheck(Resources.disk(0).getName());
-        return resourceCheck.isEnough(resourcesList, configuration.getDisk());
+        return isEnoughDisk(resourcesList, configuration.getDisk());
     }
 
     private boolean isEnoughCPU(List<Protos.Resource> resourcesList) {
-        ResourceCheck resourceCheck = new ResourceCheck(Resources.cpus(0).getName());
-        return resourceCheck.isEnough(resourcesList, configuration.getCpus());
+        return isEnoughCPU(resourcesList, configuration.getCpus());
     }
 
     private boolean isEnoughRAM(List<Protos.Resource> resourcesList) {
+        return isEnoughRAM(resourcesList, configuration.getMem());
+    }
+
+    private boolean isEnoughDisk(List<Protos.Resource> resourcesList, double amountRequested) {
+        ResourceCheck resourceCheck = new ResourceCheck(Resources.disk(0).getName());
+        return resourceCheck.isEnough(resourcesList, amountRequested);
+    }
+
+    private boolean isEnoughCPU(List<Protos.Resource> resourcesList, double amountRequested) {
+        ResourceCheck resourceCheck = new ResourceCheck(Resources.cpus(0).getName());
+        return resourceCheck.isEnough(resourcesList, amountRequested);
+    }
+
+    private boolean isEnoughRAM(List<Protos.Resource> resourcesList, double amountRequested) {
         ResourceCheck resourceCheck = new ResourceCheck(Resources.mem(0).getName());
-        return resourceCheck.isEnough(resourcesList, configuration.getMem());
+        return resourceCheck.isEnough(resourcesList, amountRequested);
     }
 
     private boolean containsTwoPorts(List<Protos.Resource> resources) {
         int count = Resources.selectTwoPortsFromRange(resources).size();
         return count == 2;
+    }
+
+    private boolean containsOnePorts(List<Protos.Resource> resources) {
+        int count = Resources.selectOnePortsFromRange(resources).size();
+        return count == 1;
     }
 
     @Override

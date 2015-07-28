@@ -1,6 +1,7 @@
 package org.apache.mesos.elasticsearch.systemtest;
 
 import org.apache.log4j.Logger;
+import org.apache.mesos.elasticsearch.systemtest.containers.ConfigurationContainer;
 import org.apache.mesos.mini.MesosCluster;
 import org.apache.mesos.mini.mesos.MesosClusterConfig;
 import org.junit.BeforeClass;
@@ -27,8 +28,8 @@ public abstract class TestBase {
 
     @BeforeClass
     public static void startScheduler() throws Exception {
-        cluster.injectImage("mesos/elasticsearch-executor");
-
+//        cluster.injectImage("mesos/elasticsearch-executor");
+        cluster.injectImage(ConfigurationContainer.IMAGE_NAME);
         LOGGER.info("Starting Elasticsearch scheduler");
 
         scheduler = new ElasticsearchSchedulerContainer(config.dockerClient, cluster.getMesosContainer().getIpAddress());

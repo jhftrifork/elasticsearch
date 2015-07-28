@@ -10,4 +10,8 @@ public class Discovery {
     public static final String CLIENT_PORT_NAME = "CLIENT_PORT";
     public static final String TRANSPORT_PORT_NAME = "TRANSPORT_PORT";
     public static final int EXPECTED_NUMBER_OF_PORTS = 2;
+
+    // A webserver task has 1 port
+    public static final int WEBSERVER_PORT_INDEX = 0;
+    public static final String WEBSERVER_PORT_NAME = "WEBSERVER_PORT";
 }

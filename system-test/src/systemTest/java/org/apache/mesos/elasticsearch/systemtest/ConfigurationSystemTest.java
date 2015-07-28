@@ -5,6 +5,7 @@ import com.mashape.unirest.http.Unirest;
 import org.apache.log4j.Logger;
 import org.apache.mesos.elasticsearch.configuration.webserver.controller.FileServer;
 import org.apache.mesos.elasticsearch.systemtest.containers.ConfigurationContainer;
+import org.apache.mesos.mini.mesos.MesosClusterConfig;
 import org.junit.Test;
 import org.springframework.http.HttpStatus;
 
@@ -33,8 +34,8 @@ public class ConfigurationSystemTest extends TestBase {
     @Test
     public void testServerAccessibleWithMesos() throws InterruptedException {
         LOGGER.debug("Starting configuration container");
-//        AbstractContainer container = new ConfigurationContainer(config.dockerClient);
-        cluster.injectImage(ConfigurationContainer.IMAGE_NAME);
+        // Set proxy
+        MesosClusterConfig.builder().defaultDockerClient();
         LOGGER.debug("Configuration container started");
     }
 
