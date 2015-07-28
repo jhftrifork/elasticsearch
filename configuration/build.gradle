@@ -21,9 +21,11 @@ repositories {
     }
 }
 
+configurations {
+    all*.exclude group:"org.springframework.boot", module: "spring-boot-starter-logging"
+}
+
 dependencies {
-    compile project(':commons')
-    compile "log4j:log4j:1.2.16"
     compile("org.springframework.boot:spring-boot-starter-web:1.2.4.RELEASE")
     compile("org.springframework.boot:spring-boot-starter-log4j:1.2.4.RELEASE")
 }
@@ -48,6 +50,6 @@ task copyJar(type: Copy) {
 }
 
 task copyShellScript(type: Copy) {
-    from        "start-executor.sh"
+    from        "start-configuration.sh"
     into        'build/docker'
 }

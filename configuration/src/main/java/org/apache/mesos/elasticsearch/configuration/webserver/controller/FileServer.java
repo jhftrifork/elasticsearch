@@ -11,7 +11,10 @@ import org.springframework.web.bind.annotation.RestController;
 @RestController
 @RequestMapping("/v1/configuration")
 public class FileServer {
-    @RequestMapping(value = "/health", method = RequestMethod.GET)
+    public static final String BASE_URL = "/v1/configuration";
+    public static final String HEALTH_URL = "/health";
+
+    @RequestMapping(value = HEALTH_URL, method = RequestMethod.GET)
     public HttpStatus healthcheck() {
         return HttpStatus.OK;
     }
