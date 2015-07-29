@@ -1,7 +1,6 @@
 var app = angular.module('mesos-es-ui', [
     'ngRoute',
     'ngResource',
-    'ui.bootstrap',
     'angularMoment',
     'jsonFormatter',
 	'mesos-es-ui.config',
@@ -13,12 +12,10 @@ var app = angular.module('mesos-es-ui', [
 app.config(['$routeProvider', function ($routeProvider) {
     $routeProvider.when('/', {
         templateUrl: 'partials/cluster.html',
-        controller: 'ClusterController',
-        activeTab: 'cluster'
+        controller: 'ClusterController'
     }).when('/tasks', {
         templateUrl: 'partials/tasks.html',
-        controller: 'TasksController',
-        activeTab: 'tasks'
+        controller: 'TasksController'
     }).otherwise({
         redirectTo: '/'
     });

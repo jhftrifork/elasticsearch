@@ -11,11 +11,7 @@ public class Configuration {
 
     private double mem = 512;
 
-    private String memUnits = "MB";
-
     private double disk = 250;
-
-    private String diskUnits = "GB";
 
     private int numberOfHwNodes;
 
@@ -34,20 +30,13 @@ public class Configuration {
     public double getMem() {
         return mem;
     }
-    public void setMem(double mem) {
-        this.mem = mem;
-    }
 
-    public String getMemUnits() {
-        return memUnits;
+    public void setMem(double newMem) {
+        mem = newMem;
     }
 
     public double getDisk() {
         return disk;
-    }
-
-    public String getDiskUnits() {
-        return diskUnits;
     }
 
     public State getState() {
