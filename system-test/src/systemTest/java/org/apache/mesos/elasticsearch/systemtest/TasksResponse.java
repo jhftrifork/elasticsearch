@@ -35,11 +35,11 @@ public class TasksResponse {
         public Boolean call() throws Exception {
             try {
                 String tasksEndPoint = "http://" + schedulerIpAddress + ":8080/v1/tasks";
-                LOGGER.debug("Fetching tasks on " + tasksEndPoint);
+                LOGGER.info("Fetching tasks on " + tasksEndPoint);
                 response = Unirest.get(tasksEndPoint).asJson();
                 return response.getBody().getArray().length() == 3;
             } catch (UnirestException e) {
-                LOGGER.debug("Waiting until 3 tasks are started...");
+                LOGGER.info("Waiting until 3 tasks are started...");
                 return false;
             }
         }
