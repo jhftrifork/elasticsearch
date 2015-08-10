@@ -89,4 +89,29 @@ public class SchedulerMainSystemTest {
         Boolean containerExists = containers.stream().anyMatch(c -> c.getId().equals(containerId));
         assertTrue(containerExists);
     }
+
+    @Test
+    public void ensureMainWorksIfStartingTwoSchedulers() throws Exception {
+        String framework1ContainerId = createSchedulerWithFrameworkName("framework1");
+        String framework2ContainerId = createSchedulerWithFrameworkName("framework2");
+
+        CONFIG.dockerClient.startContainerCmd(framework1ContainerId).exec();
+        CONFIG.dockerClient.startContainerCmd(framework2ContainerId).exec();
+
+        Awaitility.await().atMost(15, TimeUnit.SECONDS).until(() -> {
+            List<Container> containers = CONFIG.dockerClient.listContainersCmd().exec();
+            return containers.stream().anyMatch(c -> c.getId().equals(framework1ContainerId)) &&
+                   containers.stream().anyMatch(c -> c.getId().equals(framework2ContainerId));
+        });
+    }
+
+    private String createSchedulerWithFrameworkName(String frameworkName) {
+        return CONFIG
+                .dockerClient
+                .createContainerCmd("mesos/elasticsearch-scheduler")
+                .withEnv("JAVA_OPTS=-Xms128m -Xmx256m")
+                .withCmd("-zk", "zk://" + "noIP" + ":2181/mesos", "-n", "3", "-ram", "256", "--frameworkName", frameworkName)
+                .exec()
+                .getId();
+    }
 }

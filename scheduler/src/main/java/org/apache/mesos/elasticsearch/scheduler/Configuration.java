@@ -21,6 +21,8 @@ public class Configuration {
 
     private int numberOfHwNodes;
 
+    private String frameworkName;
+
     private SerializableState state;
 
     private String version;
@@ -28,6 +30,7 @@ public class Configuration {
     private String zookeeperUrl;
 
     private int managementApiPort;
+
     private FrameworkState frameworkState;
 
     public double getCpus() {
@@ -70,7 +73,10 @@ public class Configuration {
     }
 
     public String getFrameworkName() {
-        return "elasticsearch";
+        return this.frameworkName;
+    }
+    public void setFrameworkName(String frameworkName) {
+        this.frameworkName = frameworkName;
     }
 
     // DCOS Certification requirement 01

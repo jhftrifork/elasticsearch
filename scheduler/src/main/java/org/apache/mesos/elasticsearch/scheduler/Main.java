@@ -20,12 +20,12 @@ import java.util.concurrent.TimeUnit;
  */
 public class Main {
 
-    public static final String NUMBER_OF_HARDWARE_NODES = "n";
+    public static final String NUMBER_OF_HARDWARE_NODES_OPTION_NAME = "n";
+    public static final String ZK_URL_OPTION_NAME = "zk";
+    public static final String MANAGEMENT_API_PORT_OPTION_NAME = "m";
+    public static final String RAM_OPTION_NAME = "ram";
+    public static final String FRAMEWORK_NAME_OPTION_NAME = "fn";
 
-    public static final String ZK_URL = "zk";
-
-    public static final String MANAGEMENT_API_PORT = "m";
-    public static final String RAM = "ram";
     public static final long ZK_TIMEOUT = 20000L;
     public static final String CLUSTER_NAME = "/mesos-ha";
     public static final String FRAMEWORK_NAME = "/elasticsearch-mesos";
@@ -36,10 +36,11 @@ public class Main {
 
     public Main() {
         this.options = new Options();
-        this.options.addOption(NUMBER_OF_HARDWARE_NODES, "numHardwareNodes", true, "number of hardware nodes");
-        this.options.addOption(ZK_URL, "zookeeperUrl", true, "Zookeeper urls in the format zk://IP:PORT,IP:PORT,...)");
-        this.options.addOption(MANAGEMENT_API_PORT, "StatusPort", true, "TCP port for status interface. Default is 8080");
-        this.options.addOption(RAM, "ElasticsearchRam", true, "Amount of RAM to give the Elasticsearch instances");
+        this.options.addOption(NUMBER_OF_HARDWARE_NODES_OPTION_NAME, "numHardwareNodes", true, "number of hardware nodes");
+        this.options.addOption(ZK_URL_OPTION_NAME, "zookeeperUrl", true, "Zookeeper urls in the format zk://IP:PORT,IP:PORT,...)");
+        this.options.addOption(MANAGEMENT_API_PORT_OPTION_NAME, "StatusPort", true, "TCP port for status interface. Default is 8080");
+        this.options.addOption(RAM_OPTION_NAME, "ElasticsearchRam", true, "Amount of RAM to give the Elasticsearch instances");
+        this.options.addOption(FRAMEWORK_NAME_OPTION_NAME, "frameworkName", true, "Name to give to the Mesos framework instance");
     }
 
     public static void main(String[] args) {
@@ -88,11 +89,11 @@ public class Main {
         DefaultParser parser = new DefaultParser();
         CommandLine cmd = parser.parse(options, args);
 
-        String numberOfHwNodesString = cmd.getOptionValue(NUMBER_OF_HARDWARE_NODES);
-        String zkUrl = cmd.getOptionValue(ZK_URL);
-        String ram = cmd.getOptionValue(RAM, Double.toString(configuration.getMem()));
-        String managementApiPort = cmd.getOptionValue(MANAGEMENT_API_PORT, "8080");
-
+        String numberOfHwNodesString = cmd.getOptionValue(NUMBER_OF_HARDWARE_NODES_OPTION_NAME);
+        String zkUrl = cmd.getOptionValue(ZK_URL_OPTION_NAME);
+        String ram = cmd.getOptionValue(RAM_OPTION_NAME, Double.toString(configuration.getMem()));
+        String managementApiPort = cmd.getOptionValue(MANAGEMENT_API_PORT_OPTION_NAME, "8080");
+        String frameworkName = cmd.getOptionValue(FRAMEWORK_NAME_OPTION_NAME, "elasticsearch");
 
         if (numberOfHwNodesString == null || zkUrl == null) {
             printUsageAndExit();
@@ -105,6 +106,7 @@ public class Main {
         configuration.setState(getState(zkUrl));
         configuration.setMem(Double.parseDouble(ram));
         configuration.setManagementApiPort(Integer.parseInt(managementApiPort));
+        configuration.setFrameworkName(frameworkName);
     }
 
     private SerializableState getState(String zkUrl) {
