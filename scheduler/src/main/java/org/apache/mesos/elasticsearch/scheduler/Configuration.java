@@ -46,7 +46,6 @@ public class Configuration {
         }
     }
 
-
     // **** ELASTICSEARCH
     public static final String ELASTICSEARCH_CPU = "--elasticsearchCpu";
     @Parameter(names = {ELASTICSEARCH_CPU}, description = "The amount of CPU resource to allocate to the elasticsearch instance.", validateValueWith = CLIValidators.PositiveDouble.class)
