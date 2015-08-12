@@ -32,7 +32,7 @@ public class ClusterController {
     @RequestMapping(method = RequestMethod.GET)
     public ClusterInfoResponse clusterInfo() {
         ClusterInfoResponse response = new ClusterInfoResponse();
-        response.name = configuration.getTaskName();
+        response.name = configuration.getFrameworkName();
         response.configuration = toMap(configuration);
         return response;
     }
