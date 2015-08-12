@@ -9,6 +9,7 @@ import java.util.HashMap;
  */
 public class Main {
     private final Environment env;
+
     private Configuration configuration;
 
     public Main(Environment env) {
