@@ -9,13 +9,13 @@ import org.apache.mesos.Protos;
 public class TaskStatus {
     private static final Logger LOGGER = Logger.getLogger(TaskStatus.class.getCanonicalName());
     private Protos.TaskID taskID = Protos.TaskID.newBuilder().setValue("").build();
-    private Protos.TaskStatus currentState = getTaskStatus(Protos.TaskState.TASK_STAGING);
+    private Protos.TaskStatus currentTaskStatus = getTaskStatus(Protos.TaskState.TASK_STAGING);
 
     private Protos.TaskStatus getTaskStatus(Protos.TaskState taskState) {
         Protos.TaskStatus status = Protos.TaskStatus.newBuilder()
                 .setTaskId(taskID)
                 .setState(taskState).build();
-        currentState = status;
+        currentTaskStatus = status;
         return status;
     }
 
@@ -52,6 +52,6 @@ public class TaskStatus {
     }
 
     public Protos.TaskStatus currentState() {
-        return currentState;
+        return currentTaskStatus;
     }
 }
