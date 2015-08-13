@@ -35,12 +35,21 @@ public class ElasticsearchExecutor implements Executor {
 
     @Override
     public void registered(ExecutorDriver driver, Protos.ExecutorInfo executorInfo, Protos.FrameworkInfo frameworkInfo, Protos.SlaveInfo slaveInfo) {
-        LOGGER.info("Executor Elasticsearch registered on slave " + slaveInfo.getHostname());
+        LOGGER.info(
+            "Executor \"" + executorInfo.getName() + "\" " +
+            "for framework \"" + frameworkInfo.getId().getValue() + "\" " +
+            "(framework name \"" + frameworkInfo.getName() + "\") " +
+            "registered on slave \"" + slaveInfo.getId() + "\" " +
+            "(hostname \"" + slaveInfo.getHostname() + "\")"
+        );
     }
 
     @Override
     public void reregistered(ExecutorDriver driver, Protos.SlaveInfo slaveInfo) {
-        LOGGER.info("Executor Elasticsearch re-registered on slave " + slaveInfo.getHostname());
+        LOGGER.info(
+            "Executor re-registered on slave \"" + slaveInfo.getId() + "\" " +
+            "(hostname \"" + slaveInfo.getHostname() + "\")"
+        );
     }
 
     @Override
@@ -50,8 +59,7 @@ public class ElasticsearchExecutor implements Executor {
 
     @Override
     public void launchTask(final ExecutorDriver driver, final Protos.TaskInfo task) {
-        LOGGER.info("Starting executor with a TaskInfo of:");
-        LOGGER.info(task.toString());
+        LOGGER.info("Starting executor with a TaskInfo of:\n" + task.toString());
 
         Protos.TaskID taskID = task.getTaskId();
         taskStatus.setTaskID(taskID);
@@ -128,7 +136,7 @@ public class ElasticsearchExecutor implements Executor {
 
     @Override
     public void shutdown(ExecutorDriver driver) {
-        LOGGER.info("Shutting down framework...");
+        LOGGER.info("Shutting down executor...");
     }
 
     @Override
