@@ -64,8 +64,7 @@ public class ElasticsearchExecutor implements Executor {
         Protos.TaskID taskID = task.getTaskId();
         taskStatus.setTaskID(taskID);
 
-        // Send status update, starting
-        driver.sendStatusUpdate(taskStatus.starting());
+        taskStatus.setTaskState(Protos.TaskState.TASK_STARTING, driver);
 
         try {
             // Parse CommandInfo arguments
@@ -103,16 +102,14 @@ public class ElasticsearchExecutor implements Executor {
             Runtime.getRuntime().addShutdownHook(new Thread(new Runnable() {
                 @Override
                 public void run() {
-                    // Send status update, finished
-                    driver.sendStatusUpdate(taskStatus.finished());
+                    taskStatus.setTaskState(Protos.TaskState.TASK_FINISHED, driver);
                     node.close();
                 }
             }));
 
-            // Send status update, running
-            driver.sendStatusUpdate(taskStatus.running());
+            taskStatus.setTaskState(Protos.TaskState.TASK_RUNNING, driver);
         } catch (InvalidParameterException | MalformedURLException e) {
-            driver.sendStatusUpdate(taskStatus.failed());
+            taskStatus.setTaskState(Protos.TaskState.TASK_FAILED, driver);
             LOGGER.error(e);
         }
     }
@@ -120,7 +117,7 @@ public class ElasticsearchExecutor implements Executor {
     @Override
     public void killTask(ExecutorDriver driver, Protos.TaskID taskId) {
         LOGGER.info("Kill task: " + taskId.getValue());
-        driver.sendStatusUpdate(taskStatus.failed());
+        taskStatus.setTaskState(Protos.TaskState.TASK_FAILED, driver);
     }
 
     @Override
@@ -128,7 +125,7 @@ public class ElasticsearchExecutor implements Executor {
         try {
             Protos.HealthCheck healthCheck = Protos.HealthCheck.parseFrom(data);
             LOGGER.info("HealthCheck request received: " + healthCheck.toString());
-            driver.sendStatusUpdate(taskStatus.currentState());
+            driver.sendStatusUpdate(taskStatus.getTaskStatus());
         } catch (InvalidProtocolBufferException e) {
             LOGGER.debug("Unable to parse framework message as HealthCheck", e);
         }

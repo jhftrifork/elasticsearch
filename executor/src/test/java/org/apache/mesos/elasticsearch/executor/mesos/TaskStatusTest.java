@@ -18,10 +18,15 @@ public class TaskStatusTest {
     @Test
     public void shouldReturnValidProtos() {
         status.setTaskID(Protos.TaskID.newBuilder().setValue("").build());
-        assertNotNull(status.starting());
-        assertNotNull(status.running());
-        assertNotNull(status.finished());
-        assertNotNull(status.failed());
-        assertNotNull(status.error());
+        status.setTaskState(Protos.TaskState.TASK_STARTING, null);
+        assertNotNull(status.setIsStarting());
+        status.setTaskState(Protos.TaskState.TASK_RUNNING, null);
+        assertNotNull(status.setIsRunning());
+        status.setTaskState(Protos.TaskState.TASK_FINISHED, null);
+        assertNotNull(status.setIsFinished());
+        status.setTaskState(Protos.TaskState.TASK_FAILED, null);
+        assertNotNull(status.setIsFailed());
+        status.setTaskState(Protos.TaskState.TASK_ERROR, null);
+        assertNotNull(status.setIsError());
     }
 }
