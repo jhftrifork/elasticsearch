@@ -8,10 +8,6 @@ import java.util.HashMap;
  * Application which starts the Elasticsearch scheduler
  */
 public class Main {
-    private final Environment env;
-
-    private Configuration configuration;
-
     public Main(Environment env) {
         this.env = env;
     }
