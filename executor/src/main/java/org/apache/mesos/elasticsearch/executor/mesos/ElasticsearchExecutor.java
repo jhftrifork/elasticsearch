@@ -21,6 +21,8 @@ import java.util.List;
 
 /**
  * Executor for Elasticsearch.
+ *
+ * This only behaves correctly in an environment where Mesos will launch an executor for each new task.
  */
 public class ElasticsearchExecutor implements Executor {
     private final Launcher launcher;
@@ -28,9 +30,9 @@ public class ElasticsearchExecutor implements Executor {
     private final TaskStatus taskStatus;
     private Configuration configuration;
 
-    public ElasticsearchExecutor(Launcher launcher, TaskStatus taskStatus) {
+    public ElasticsearchExecutor(Launcher launcher) {
         this.launcher = launcher;
-        this.taskStatus = taskStatus;
+        this.taskStatus = new TaskStatus();
     }
 
     @Override
@@ -59,7 +61,7 @@ public class ElasticsearchExecutor implements Executor {
 
     @Override
     public void launchTask(final ExecutorDriver driver, final Protos.TaskInfo task) {
-        LOGGER.info("Starting executor with a TaskInfo of:\n" + task.toString());
+        LOGGER.info("Starting task with a TaskInfo of:\n" + task.toString());
 
         Protos.TaskID taskID = task.getTaskId();
         taskStatus.setTaskID(taskID);
