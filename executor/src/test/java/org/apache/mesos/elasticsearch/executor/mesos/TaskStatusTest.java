@@ -12,12 +12,12 @@ public class TaskStatusTest {
     private TaskStatus status = new TaskStatus();
     @Test(expected = NullPointerException.class)
     public void shouldExceptionIfPassedNull() {
-        status.setTaskID(null);
+        status.setTaskId(null);
     }
 
     @Test
     public void shouldReturnValidProtos() {
-        status.setTaskID(Protos.TaskID.newBuilder().setValue("").build());
+        status.setTaskId(Protos.TaskID.newBuilder().setValue("").build());
         status.setTaskState(Protos.TaskState.TASK_STARTING, null);
         assertNotNull(status.setIsStarting());
         status.setTaskState(Protos.TaskState.TASK_RUNNING, null);

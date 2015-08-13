@@ -64,9 +64,9 @@ public class ElasticsearchExecutor implements Executor {
         LOGGER.info("Starting task with a TaskInfo of:\n" + task.toString());
 
         Protos.TaskID taskID = task.getTaskId();
-        taskStatus.setTaskID(taskID);
+        taskStatus.setTaskId(taskID);
 
-        taskStatus.setTaskState(Protos.TaskState.TASK_STARTING, driver);
+        taskStatus.setTaskState(taskID, Protos.TaskState.TASK_STARTING, driver);
 
         try {
             // Parse CommandInfo arguments
@@ -104,14 +104,14 @@ public class ElasticsearchExecutor implements Executor {
             Runtime.getRuntime().addShutdownHook(new Thread(new Runnable() {
                 @Override
                 public void run() {
-                    taskStatus.setTaskState(Protos.TaskState.TASK_FINISHED, driver);
+                    taskStatus.setTaskState(taskID, Protos.TaskState.TASK_FINISHED, driver);
                     node.close();
                 }
             }));
 
-            taskStatus.setTaskState(Protos.TaskState.TASK_RUNNING, driver);
-        } catch (InvalidParameterException | MalformedURLException e) {
-            taskStatus.setTaskState(Protos.TaskState.TASK_FAILED, driver);
+            taskStatus.setTaskState(taskID, Protos.TaskState.TASK_RUNNING, driver);
+        } catch (InvalidParameterException e) {
+            taskStatus.setTaskState(taskID, Protos.TaskState.TASK_FAILED, driver);
             LOGGER.error(e);
         }
     }
@@ -119,7 +119,7 @@ public class ElasticsearchExecutor implements Executor {
     @Override
     public void killTask(ExecutorDriver driver, Protos.TaskID taskId) {
         LOGGER.info("Kill task: " + taskId.getValue());
-        taskStatus.setTaskState(Protos.TaskState.TASK_FAILED, driver);
+        taskStatus.setTaskState(taskId, Protos.TaskState.TASK_FAILED, driver);
     }
 
     @Override
