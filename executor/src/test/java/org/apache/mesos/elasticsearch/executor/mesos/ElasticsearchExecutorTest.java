@@ -51,8 +51,10 @@ public class ElasticsearchExecutorTest {
     public void shouldSendStartUpdate() {
         // When launching
         executor.launchTask(driver, getDefaultTaskInfo().build());
-        // Should send setIsStarting
-        verify(status, times(1)).setTaskState(Protos.TaskState.TASK_STARTING, null);
+        verify(driver, times(1)).sendStatusUpdate(
+                Protos.TaskStatus.newBuilder()
+                    .setTaskId(Protos.TaskID.newBuilder().setValue("0").build())
+                    .setState(Protos.TaskState.TASK_STARTING).build());
     }
 
     @Test
@@ -76,8 +78,10 @@ public class ElasticsearchExecutorTest {
     public void shouldSendRunningUpdate() {
         // When launching
         executor.launchTask(driver, getDefaultTaskInfo().build());
-        // Should send setIsStarting
-        verify(status, times(1)).setTaskState(Protos.TaskState.TASK_RUNNING, null);
+        verify(driver, times(1)).sendStatusUpdate(
+                Protos.TaskStatus.newBuilder()
+                        .setTaskId(Protos.TaskID.newBuilder().setValue("0").build())
+                        .setState(Protos.TaskState.TASK_RUNNING).build());
     }
 
     private Protos.TaskInfo.Builder getDefaultTaskInfo() {

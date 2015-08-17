@@ -10,7 +10,7 @@ import org.junit.rules.TestWatcher;
 import org.junit.runner.Description;
 
 /**
- * Base test class which launches Mesos CLUSTER and Elasticsearch scheduler
+ * Base test class which launches Mesos CLUSTER and Elasticsearch scheduler1
  */
 @SuppressWarnings("PMD.AvoidUsingHardCodedIP")
 public abstract class TestBase {
@@ -28,14 +28,18 @@ public abstract class TestBase {
     @ClassRule
     public static final MesosCluster CLUSTER = new MesosCluster(CONFIG);
 
-    private static ElasticsearchSchedulerContainer scheduler;
+    // Generality of tests is increased by always starting two frameworks, verifying that a single ES framework instance
+    // works correctly in the presence of other ES frameworks.
+    private static ElasticsearchSchedulerContainer scheduler1;
+    private static ElasticsearchSchedulerContainer scheduler2;
 
     @Rule
     public TestWatcher watchman = new TestWatcher() {
         @Override
         protected void failed(Throwable e, Description description) {
             CLUSTER.stop();
-            scheduler.remove();
+            scheduler1.remove();
+            scheduler2.remove();
         }
     };
 
@@ -43,16 +47,25 @@ public abstract class TestBase {
     public static void startScheduler() throws Exception {
         CLUSTER.injectImage("mesos/elasticsearch-executor");
 
-        LOGGER.info("Starting Elasticsearch scheduler");
+        LOGGER.info("Starting Elasticsearch schedulers");
 
-        scheduler = new ElasticsearchSchedulerContainer(CONFIG.dockerClient, CLUSTER.getMesosContainer().getIpAddress());
-        CLUSTER.addAndStartContainer(scheduler);
+        scheduler1 = new ElasticsearchSchedulerContainer(CONFIG.dockerClient, CLUSTER.getMesosContainer().getIpAddress(), "8080", "elasticsearch-framework-1");
+        CLUSTER.addAndStartContainer(scheduler1);
 
-        LOGGER.info("Started Elasticsearch scheduler on " + scheduler.getIpAddress() + ":31100");
+        LOGGER.info("Started Elasticsearch scheduler1 on " + scheduler1.getIpAddress() + ":8080");
+
+        scheduler2 = new ElasticsearchSchedulerContainer(CONFIG.dockerClient, CLUSTER.getMesosContainer().getIpAddress(), "8081", "elasticsearch-framework-2");
+        CLUSTER.addAndStartContainer(scheduler2);
+
+        LOGGER.info("Started Elasticsearch scheduler2 on " + scheduler2.getIpAddress() + ":8081");
     }
 
-    public static ElasticsearchSchedulerContainer getScheduler() {
-        return scheduler;
+    public static ElasticsearchSchedulerContainer getScheduler1() {
+        return scheduler1;
+    }
+
+    public static ElasticsearchSchedulerContainer getScheduler2() {
+        return scheduler2;
     }
 
 }

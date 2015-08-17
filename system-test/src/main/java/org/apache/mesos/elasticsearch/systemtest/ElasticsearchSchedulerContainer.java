@@ -21,12 +21,23 @@ public class ElasticsearchSchedulerContainer extends AbstractContainer {
     public static final String SCHEDULER_NAME = "elasticsearch-scheduler";
 
     private String mesosIp;
+    private String managementPort;
+    private String frameworkName;    private String zookeeperFrameworkUrl;
 
-    private String zookeeperFrameworkUrl;
 
-    protected ElasticsearchSchedulerContainer(DockerClient dockerClient, String mesosIp) {
+    public String getManagementPort() {
+        return managementPort;
+    }
+
+    public String getFrameworkName() {
+        return frameworkName;
+    }
+
+    protected ElasticsearchSchedulerContainer(DockerClient dockerClient, String mesosIp, String managementPort, String frameworkName) {
         super(dockerClient);
         this.mesosIp = mesosIp;
+        this.managementPort = managementPort;
+        this.frameworkName = frameworkName;
     }
 
     @Override
@@ -48,9 +59,12 @@ public class ElasticsearchSchedulerContainer extends AbstractContainer {
                         ElasticsearchCLIParameter.ELASTICSEARCH_NODES, "3",
                         Configuration.ELASTICSEARCH_RAM, "256",
                         Configuration.WEB_UI_PORT, "31100",
-                        Configuration.EXECUTOR_NAME, "esdemo");
+                        Configuration.EXECUTOR_NAME, "esdemo",
+                        "-m", managementPort,
+                        "--frameworkName", frameworkName
+                );
     }
-
+    
     public String getZookeeperMesosUrl() {
         return "zk://" + mesosIp + ":2181/mesos";
     }
@@ -60,10 +74,10 @@ public class ElasticsearchSchedulerContainer extends AbstractContainer {
     }
 
     public String getZookeeperFrameworkUrl() {
-      if (StringUtils.isBlank(zookeeperFrameworkUrl)) {
-        return getZookeeperMesosUrl();
-      } else {
-        return zookeeperFrameworkUrl;
-      }
+        if (StringUtils.isBlank(zookeeperFrameworkUrl)) {
+            return getZookeeperMesosUrl();
+        } else {
+            return zookeeperFrameworkUrl;
+        }
     }
 }

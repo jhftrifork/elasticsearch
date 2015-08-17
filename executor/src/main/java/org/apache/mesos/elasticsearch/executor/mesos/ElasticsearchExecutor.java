@@ -64,7 +64,6 @@ public class ElasticsearchExecutor implements Executor {
         LOGGER.info("Starting task with a TaskInfo of:\n" + task.toString());
 
         Protos.TaskID taskID = task.getTaskId();
-        taskStatus.setTaskId(taskID);
 
         taskStatus.setTaskState(taskID, Protos.TaskState.TASK_STARTING, driver);
 

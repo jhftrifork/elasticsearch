@@ -38,7 +38,12 @@ public class Main {
 
         LOGGER.info("Starting scheduler");
 
-        ElasticsearchSchedulerContainer scheduler = new ElasticsearchSchedulerContainer(config.dockerClient, cluster.getMesosContainer().getIpAddress());
+        ElasticsearchSchedulerContainer scheduler = new ElasticsearchSchedulerContainer(
+                config.dockerClient,
+                cluster.getMesosContainer().getIpAddress(),
+                "8080",
+                "elasticsearch-systemtest-instance"
+        );
         schedulerReference.set(scheduler);
 
         scheduler.start();

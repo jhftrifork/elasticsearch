@@ -23,10 +23,12 @@ public class TasksResponse {
 
     private HttpResponse<JsonNode> response;
     private String schedulerIpAddress;
+    private String schedulerManagementPort;
     private int nodesCount;
 
-    public TasksResponse(String schedulerIpAddress, int nodesCount) {
+    public TasksResponse(String schedulerIpAddress, String schedulerManagementPort, int nodesCount) {
         this.schedulerIpAddress = schedulerIpAddress;
+        this.schedulerManagementPort = schedulerManagementPort;
         this.nodesCount = nodesCount;
         await().atMost(60, TimeUnit.SECONDS).until(new TasksCall());
     }
@@ -36,7 +38,7 @@ public class TasksResponse {
         @Override
         public Boolean call() throws Exception {
             try {
-                String tasksEndPoint = "http://" + schedulerIpAddress + ":31100/v1/tasks";
+                String tasksEndPoint = "http://" + schedulerIpAddress + ":" + schedulerManagementPort + "/v1/tasks";
                 LOGGER.debug("Fetching tasks on " + tasksEndPoint);
                 response = Unirest.get(tasksEndPoint).asJson();
                 return response.getBody().getArray().length() == nodesCount;

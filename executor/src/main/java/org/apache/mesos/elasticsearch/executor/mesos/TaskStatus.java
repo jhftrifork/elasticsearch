@@ -15,22 +15,26 @@ public class TaskStatus {
     private Protos.TaskID taskId = null;
     private Protos.TaskState taskState = null;
 
-    // Precondition: this.taskId != null
     public void setTaskState(Protos.TaskID taskId, Protos.TaskState newTaskState, ExecutorDriver driver) {
         LOGGER.info("Setting task \"" + taskId.getValue() + "\" to state \"" + newTaskState.name() + "\"");
-        Validate.isTrue(this.taskId == taskId, "The Elasticsearch executor cannot launch multiple tasks");
+
+        if (this.taskId == null) {
+            this.taskId = taskId;
+            Validate.isTrue(this.taskState == null, "TaskState recorded for a null task ID");
+        }
+        else {
+            Validate.isTrue(this.taskId == taskId, "The Elasticsearch executor cannot launch multiple tasks");
+        }
+
         taskState = newTaskState;
+
         driver.sendStatusUpdate(getTaskStatus());
     }
 
-    // Precondition: this.taskId == null
-    public void setTaskId(Protos.TaskID taskId) {
-        Validate.isTrue(this.taskId == null, "The Elasticsearch executor cannot launch multiple tasks");
-        this.taskId = taskId;
-        taskState = Protos.TaskState.TASK_STAGING;
-    }
-
     public Protos.TaskStatus getTaskStatus() {
+        Validate.notNull(taskId, "Cannot generate a TaskStatus because a task has not been started");
+        Validate.notNull(taskState, "Cannot generate a TaskStatus because a task has not been started");
+
         return Protos.TaskStatus.newBuilder()
                 .setTaskId(taskId)
                 .setState(taskState).build();

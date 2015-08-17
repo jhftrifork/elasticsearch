@@ -39,7 +39,7 @@ public class ReconciliationSystemTest {
     private static final String MESOS_LOCAL_IMAGE_NAME = "mesos-local";
     public static final int DOCKER_PORT = 2376;
 
-    private static final ContainerLifecycleManagement CONTAINER_MANGER = new ContainerLifecycleManagement();
+    private static final ContainerLifecycleManagement CONTAINER_MANAGER = new ContainerLifecycleManagement();
     private static final MesosClusterConfig CONFIG = MesosClusterConfig.builder()
             .numberOfSlaves(CLUSTER_SIZE)
             .privateRegistryPort(15000) // Currently you have to choose an available port by yourself
@@ -80,7 +80,7 @@ public class ReconciliationSystemTest {
 
     @After
     public void after() {
-        CONTAINER_MANGER.stopAll();
+        CONTAINER_MANAGER.stopAll();
     }
 
     @Test
@@ -89,7 +89,7 @@ public class ReconciliationSystemTest {
         assertCorrectNumberOfExecutors();
 
         // Stop and restart container
-        CONTAINER_MANGER.stopContainer(scheduler);
+        CONTAINER_MANAGER.stopContainer(scheduler);
         startSchedulerContainer();
         assertCorrectNumberOfExecutors();
     }
@@ -112,7 +112,7 @@ public class ReconciliationSystemTest {
         assertCorrectNumberOfExecutors();
 
         // Kill scheduler
-        CONTAINER_MANGER.stopContainer(scheduler);
+        CONTAINER_MANAGER.stopContainer(scheduler);
 
         // Kill executor
         killOneExecutor();
@@ -145,8 +145,8 @@ public class ReconciliationSystemTest {
     }
 
     private static ElasticsearchSchedulerContainer startSchedulerContainer() {
-        ElasticsearchSchedulerContainer scheduler = new ElasticsearchSchedulerContainer(CONFIG.dockerClient, CLUSTER.getMesosContainer().getIpAddress());
-        CONTAINER_MANGER.addAndStart(scheduler);
+        ElasticsearchSchedulerContainer scheduler = new ElasticsearchSchedulerContainer(CONFIG.dockerClient, CLUSTER.getMesosContainer().getIpAddress(), "8080", "elasticsearch-instance-for-reconciliation-test");
+        CONTAINER_MANAGER.addAndStart(scheduler);
         return scheduler;
     }
 

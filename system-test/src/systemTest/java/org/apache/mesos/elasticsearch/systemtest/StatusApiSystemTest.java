@@ -16,7 +16,7 @@ public class StatusApiSystemTest extends TestBase {
 
     @Test
     public void testThreeTasks() throws Exception {
-        TasksResponse tasksResponse = new TasksResponse(getScheduler().getIpAddress(), 3);
+        TasksResponse tasksResponse = new TasksResponse(getScheduler1().getIpAddress(), 3);
 
         assertEquals(3, tasksResponse.getJson().getBody().getArray().length());
 
