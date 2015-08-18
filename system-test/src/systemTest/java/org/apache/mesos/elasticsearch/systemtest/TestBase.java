@@ -44,20 +44,20 @@ public abstract class TestBase {
     };
 
     @BeforeClass
-    public static void startScheduler() throws Exception {
+    public static void startSchedulers() throws Exception {
         CLUSTER.injectImage("mesos/elasticsearch-executor");
 
         LOGGER.info("Starting Elasticsearch schedulers");
 
-        scheduler1 = new ElasticsearchSchedulerContainer(CONFIG.dockerClient, CLUSTER.getMesosContainer().getIpAddress(), "8080", "elasticsearch-framework-1");
-        CLUSTER.addAndStartContainer(scheduler1);
+        scheduler1 = startSchedulerWithNameAndPort("elasticsearch-framework-1", "8080");
+        scheduler2 = startSchedulerWithNameAndPort("elasticsearch-framework-2", "8081");
+    }
 
-        LOGGER.info("Started Elasticsearch scheduler1 on " + scheduler1.getIpAddress() + ":8080");
-
-        scheduler2 = new ElasticsearchSchedulerContainer(CONFIG.dockerClient, CLUSTER.getMesosContainer().getIpAddress(), "8081", "elasticsearch-framework-2");
-        CLUSTER.addAndStartContainer(scheduler2);
-
-        LOGGER.info("Started Elasticsearch scheduler2 on " + scheduler2.getIpAddress() + ":8081");
+    private static ElasticsearchSchedulerContainer startSchedulerWithNameAndPort(String name, String port) {
+        ElasticsearchSchedulerContainer scheduler = new ElasticsearchSchedulerContainer(CONFIG.dockerClient, CLUSTER.getMesosContainer().getIpAddress(), port, name);
+        CLUSTER.addAndStartContainer(scheduler);
+        LOGGER.info("Started Elasticsearch instance \"" + name + "\" on " + scheduler.getIpAddress() + ":" + port);
+        return scheduler;
     }
 
     public static ElasticsearchSchedulerContainer getScheduler1() {
