@@ -30,7 +30,8 @@ public class TasksResponse {
         this.schedulerIpAddress = schedulerIpAddress;
         this.schedulerManagementPort = schedulerManagementPort;
         this.nodesCount = nodesCount;
-        await().atMost(60, TimeUnit.SECONDS).until(new TasksCall());
+        LOGGER.info("Waiting for tasks at endpoint: \"" + getEndpoint() + "\"");
+        await().atMost(60, TimeUnit.SECONDS).pollInterval(1, TimeUnit.SECONDS).until(new TasksCall());
     }
 
     class TasksCall implements Callable<Boolean> {
@@ -38,15 +39,25 @@ public class TasksResponse {
         @Override
         public Boolean call() throws Exception {
             try {
-                String tasksEndPoint = "http://" + schedulerIpAddress + ":" + schedulerManagementPort + "/v1/tasks";
-                LOGGER.debug("Fetching tasks on " + tasksEndPoint);
+                String tasksEndPoint = getEndpoint();
+                LOGGER.info("Fetching tasks on " + tasksEndPoint);
                 response = Unirest.get(tasksEndPoint).asJson();
-                return response.getBody().getArray().length() == nodesCount;
+                int numTasks = response.getBody().getArray().length();
+                if (numTasks == 3) {
+                    return true;
+                } else {
+                    LOGGER.info("Waiting for " + nodesCount + " tasks, but only " + numTasks + " have started");
+                    return false;
+                }
             } catch (UnirestException e) {
-                LOGGER.debug("Waiting until " + nodesCount + " tasks are started...");
+                LOGGER.info("Exception when attempting to fetch tasks: " + e.getMessage());
                 return false;
             }
         }
+    }
+
+    private String getEndpoint() {
+        return "http://" + schedulerIpAddress + ":" + schedulerManagementPort + "/v1/tasks";
     }
 
     public HttpResponse<JsonNode> getJson() {
