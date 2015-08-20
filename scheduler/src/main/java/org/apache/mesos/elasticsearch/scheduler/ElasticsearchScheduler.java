@@ -45,17 +45,8 @@ public class ElasticsearchScheduler implements Scheduler {
     public void run() {
         LOGGER.info("Starting ElasticSearch on Mesos - [numHwNodes: " + configuration.getNumberOfHwNodes() + ", zk: " + configuration.getZookeeperUrl() + ", ram:" + configuration.getMem() + "]");
 
-        final Protos.FrameworkInfo.Builder frameworkBuilder = Protos.FrameworkInfo.newBuilder();
-        frameworkBuilder.setUser("");
-        frameworkBuilder.setName(configuration.getFrameworkName());
-        frameworkBuilder.setFailoverTimeout(configuration.getFailoverTimeout());
-        frameworkBuilder.setCheckpoint(true); // DCOS certification 04 - Checkpointing is enabled.
-
-        Protos.FrameworkID frameworkID = configuration.getFrameworkId(); // DCOS certification 02
-        if (frameworkID != null && !frameworkID.getValue().isEmpty()) {
-            LOGGER.info("Found previous frameworkID: " + frameworkID);
-            frameworkBuilder.setId(frameworkID);
-        }
+        FrameworkInfoFactory frameworkInfoFactory = new FrameworkInfoFactory(configuration);
+        final Protos.FrameworkInfo.Builder frameworkBuilder = frameworkInfoFactory.getBuilder();
 
         final MesosSchedulerDriver driver = new MesosSchedulerDriver(this, frameworkBuilder.build(), configuration.getZookeeperUrl());
 
@@ -162,7 +153,7 @@ public class ElasticsearchScheduler implements Scheduler {
 
     @Override
     public void statusUpdate(SchedulerDriver driver, Protos.TaskStatus status) {
-        LOGGER.info("Status update - " + status.toString());
+        LOGGER.info("Status update - Task with ID '" + status.getTaskId().getValue() + "' is now in state '" + status.getState() + "'. Message: " + status.getMessage());
         statusUpdateWatchers.notifyObservers(status);
     }
 
