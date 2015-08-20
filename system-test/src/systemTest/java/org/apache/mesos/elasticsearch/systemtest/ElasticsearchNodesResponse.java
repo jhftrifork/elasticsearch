@@ -31,7 +31,7 @@ public class ElasticsearchNodesResponse {
     class ElasticsearchNodesCall implements Callable<Boolean> {
 
         // Returns whether to stop polling
-        // Queries the Elasticsearch nodes list https://www.elastic.co/guide/en/elasticsearch/reference/1.6/cluster-nodes-info.html
+        // Queries the Elasticsearch nodes list https://www.elastic.co/guide/en/elasticsearch/reference/1.7/cluster-nodes-info.html
         // `discoverySuccessful` is set to `true` iff return value is `true`
         @Override
         public Boolean call() throws Exception {
@@ -53,7 +53,7 @@ public class ElasticsearchNodesResponse {
 
             GetRequest request = Unirest.get(url);
 
-            HttpResponse<String> response = null;
+            HttpResponse<String> response;
             try {
                 response = request.asString();
             }
@@ -64,7 +64,7 @@ public class ElasticsearchNodesResponse {
             // response != null
 
             if (200 <= response.getStatus() && response.getStatus() < 400) {
-                JsonNode body = null;
+                JsonNode body;
 
                 try {
                     body = new JsonNode(response.getBody());
