@@ -44,7 +44,7 @@ public class DataRetrievableAllNodesSystemTest extends TestBase {
     public static void startDataPusher() {
 
         try {
-            List<JSONObject> tasks = new TasksResponse(getScheduler().getIpAddress(), NODE_COUNT).getTasks();
+            List<JSONObject> tasks = new TasksResponse(getScheduler1().getIpAddress(), getScheduler1().getManagementPort(), NODE_COUNT).getTasks();
             for (JSONObject task : tasks) {
                 LOGGER.info(task);
                 slavesElasticAddresses.add(task.getString("http_address"));
