@@ -57,7 +57,7 @@ public class DataRetrievableAllNodesSystemTest extends TestBase {
 
         Awaitility.await().atMost(5, TimeUnit.MINUTES).pollDelay(2, TimeUnit.SECONDS).until(() -> {
             try {
-                if (!(Unirest.get("http://" + getSlavesElasticAddresses().get(0) + "/_nodes").asJson().getBody().getObject().getJSONObject("nodes").length() == 3)) {
+                if (!(Unirest.get("http://" + getSlavesElasticAddresses().get(0) + "/_nodes").asJson().getBody().getObject().getJSONObject("nodes").length() == NODE_COUNT)) {
                     return false;
                 }
                 pusher = new DataPusherContainer(CONFIG.dockerClient, getSlavesElasticAddresses().get(0));

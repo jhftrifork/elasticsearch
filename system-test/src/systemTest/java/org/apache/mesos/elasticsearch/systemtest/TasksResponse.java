@@ -43,7 +43,7 @@ public class TasksResponse {
                 LOGGER.info("Fetching tasks on " + tasksEndPoint);
                 response = Unirest.get(tasksEndPoint).asJson();
                 int numTasks = response.getBody().getArray().length();
-                if (numTasks == 3) {
+                if (numTasks == tasksCount) {
                     return true;
                 } else {
                     LOGGER.info("Waiting for " + tasksCount + " tasks, but only " + numTasks + " have started");
