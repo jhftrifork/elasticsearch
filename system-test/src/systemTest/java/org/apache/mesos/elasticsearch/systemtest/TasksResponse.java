@@ -24,12 +24,12 @@ public class TasksResponse {
     private HttpResponse<JsonNode> response;
     private String schedulerIpAddress;
     private String schedulerManagementPort;
-    private int nodesCount;
+    private int tasksCount;
 
-    public TasksResponse(String schedulerIpAddress, String schedulerManagementPort, int nodesCount) {
+    public TasksResponse(String schedulerIpAddress, String schedulerManagementPort, int tasksCount) {
         this.schedulerIpAddress = schedulerIpAddress;
         this.schedulerManagementPort = schedulerManagementPort;
-        this.nodesCount = nodesCount;
+        this.tasksCount = tasksCount;
         LOGGER.info("Waiting for tasks at endpoint: \"" + getEndpoint() + "\"");
         await().atMost(60, TimeUnit.SECONDS).pollInterval(1, TimeUnit.SECONDS).until(new TasksCall());
     }
@@ -46,7 +46,7 @@ public class TasksResponse {
                 if (numTasks == 3) {
                     return true;
                 } else {
-                    LOGGER.info("Waiting for " + nodesCount + " tasks, but only " + numTasks + " have started");
+                    LOGGER.info("Waiting for " + tasksCount + " tasks, but only " + numTasks + " have started");
                     return false;
                 }
             } catch (UnirestException e) {
