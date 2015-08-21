@@ -16,6 +16,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Observable;
+import java.util.stream.Collectors;
 
 /**
  * Scheduler for Elasticsearch.
@@ -88,67 +89,68 @@ public class ElasticsearchScheduler implements Scheduler {
         LOGGER.info("Framework re-registered");
     }
 
-    // Todo, this massive if statement needs to be performed better.
+    @SuppressWarnings({"PMD.NPathComplexity"})
     @Override
     public void resourceOffers(SchedulerDriver driver, List<Protos.Offer> offers) {
         if (!registered) {
             LOGGER.debug("Not registered, can't accept resource offers.");
             return;
         }
+
+        List<OfferCheck> checks = Arrays.asList(
+                (Protos.Offer offer) ->
+                        isHostAlreadyRunningTask(offer)
+                                ? Arrays.asList("Host " + offer.getHostname() + " is already running an Elasticsearch task")
+                                : Arrays.asList(),
+                (Protos.Offer offer) ->
+                        clusterMonitor.getClusterState().getTaskList().size() == configuration.getElasticsearchNodes()
+                                ? Arrays.asList("Mesos is already running " + configuration.getElasticsearchNodes() + " Elasticsearch tasks")
+                                : Arrays.asList(),
+                (Protos.Offer offer) ->
+                        !containsEnoughPorts(offer.getResourcesList())
+                                ? Arrays.asList("Offer did not contain 2 ports for Elasticsearch client and transport connection")
+                                : Arrays.asList(),
+                new ResourceOfferCheck(Resources.cpus(0).getName(), configuration.getCpus(), "Not enough CPU"),
+                new ResourceOfferCheck(Resources.mem(0).getName(), configuration.getMem(), "Not enough RAM"),
+                new ResourceOfferCheck(Resources.disk(0).getName(), configuration.getDisk(), "Not enough disk")
+        );
+
         for (Protos.Offer offer : offers) {
-            if (isHostAlreadyRunningTask(offer)) {
-                driver.declineOffer(offer.getId()); // DCOS certification 05
-                LOGGER.info("Declined offer: Host " + offer.getHostname() + " is already running an Elastisearch task");
-            } else if (clusterMonitor.getClusterState().getTaskList().size() == configuration.getElasticsearchNodes()) {
-                driver.declineOffer(offer.getId()); // DCOS certification 05
-                LOGGER.info("Declined offer: Mesos runs already runs " + configuration.getElasticsearchNodes() + " Elasticsearch tasks");
-            } else if (!containsTwoPorts(offer.getResourcesList())) {
-                LOGGER.info("Declined offer: Offer did not contain 2 ports for Elasticsearch client and transport connection");
-                driver.declineOffer(offer.getId());
-            } else if (!isEnoughCPU(offer.getResourcesList())) {
-                LOGGER.info("Declined offer: Not enough CPU resources");
-                driver.declineOffer(offer.getId());
-            } else if (!isEnoughRAM(offer.getResourcesList())) {
-                LOGGER.info("Declined offer: Not enough RAM resources");
-                driver.declineOffer(offer.getId());
-            } else if (!isEnoughDisk(offer.getResourcesList())) {
-                LOGGER.info("Not enough Disk resources");
-                driver.declineOffer(offer.getId());
+            LOGGER.info("Considering offer: " + offer.toString());
+
+            List<String> failures = checks.stream().flatMap((OfferCheck pred) -> pred.checkOffer(offer).stream()).collect(Collectors.toList());
+
+            if (failures.isEmpty()) {
+                acceptOffer(driver, offer);
             } else {
-                LOGGER.info("Accepted offer: " + offer.getHostname());
-                Protos.TaskInfo taskInfo = taskInfoFactory.createTask(configuration, offer);
-                LOGGER.debug(taskInfo.toString());
-                driver.launchTasks(Collections.singleton(offer.getId()), Collections.singleton(taskInfo));
-                Task task = new Task(
-                        offer.getHostname(),
-                        taskInfo.getTaskId().getValue(),
-                        Protos.TaskState.TASK_STAGING,
-                        clock.zonedNow(),
-                        new InetSocketAddress(offer.getHostname(), taskInfo.getDiscovery().getPorts().getPorts(Discovery.CLIENT_PORT_INDEX).getNumber()),
-                        new InetSocketAddress(offer.getHostname(), taskInfo.getDiscovery().getPorts().getPorts(Discovery.TRANSPORT_PORT_INDEX).getNumber())
-                );
-                tasks.put(taskInfo.getTaskId().getValue(), task);
-                clusterMonitor.monitorTask(taskInfo); // Add task to cluster monitor
+                declineOffer(driver, offer, String.join("; ", failures));
             }
         }
     }
 
-    private boolean isEnoughDisk(List<Protos.Resource> resourcesList) {
-        ResourceCheck resourceCheck = new ResourceCheck(Resources.disk(0).getName());
-        return resourceCheck.isEnough(resourcesList, configuration.getDisk());
+    private void declineOffer(SchedulerDriver driver, Protos.Offer offer, String reason) {
+        LOGGER.info("Declining offer because: " + reason);
+        driver.declineOffer(offer.getId());
     }
 
-    private boolean isEnoughCPU(List<Protos.Resource> resourcesList) {
-        ResourceCheck resourceCheck = new ResourceCheck(Resources.cpus(0).getName());
-        return resourceCheck.isEnough(resourcesList, configuration.getCpus());
+    private void acceptOffer(SchedulerDriver driver, Protos.Offer offer) {
+        LOGGER.info("Accepting Mesos offer for host with hostname: " + offer.getHostname());
+        Protos.TaskInfo taskInfo = taskInfoFactory.createTask(configuration, offer);
+        LOGGER.debug("Launching Mesos task: " + taskInfo.toString());
+        driver.launchTasks(Collections.singleton(offer.getId()), Collections.singleton(taskInfo));
+        Task task = new Task(
+                offer.getHostname(),
+                taskInfo.getTaskId().getValue(),
+                Protos.TaskState.TASK_STAGING,
+                clock.zonedNow(),
+                new InetSocketAddress(offer.getHostname(), taskInfo.getDiscovery().getPorts().getPorts(Discovery.CLIENT_PORT_INDEX).getNumber()),
+                new InetSocketAddress(offer.getHostname(), taskInfo.getDiscovery().getPorts().getPorts(Discovery.TRANSPORT_PORT_INDEX).getNumber())
+        );
+        tasks.put(taskInfo.getTaskId().getValue(), task);
+        clusterMonitor.monitorTask(taskInfo); // Add task to cluster monitor
     }
 
-    private boolean isEnoughRAM(List<Protos.Resource> resourcesList) {
-        ResourceCheck resourceCheck = new ResourceCheck(Resources.mem(0).getName());
-        return resourceCheck.isEnough(resourcesList, configuration.getMem());
-    }
-
-    private boolean containsTwoPorts(List<Protos.Resource> resources) {
+    private boolean containsEnoughPorts(List<Protos.Resource> resources) {
         int count = Resources.selectTwoPortsFromRange(resources).size();
         return count == 2;
     }
