@@ -5,7 +5,9 @@ import com.github.dockerjava.api.command.CreateContainerResponse;
 import com.github.dockerjava.api.command.StartContainerCmd;
 import com.github.dockerjava.api.model.Container;
 import com.jayway.awaitility.Awaitility;
+import org.apache.commons.collections4.CollectionUtils;
 import org.apache.commons.io.IOUtils;
+import org.apache.log4j.Logger;
 import org.apache.mesos.elasticsearch.common.cli.ElasticsearchCLIParameter;
 import org.apache.mesos.elasticsearch.common.cli.ZookeeperCLIParameter;
 import org.apache.mesos.elasticsearch.scheduler.Configuration;
@@ -13,8 +15,12 @@ import org.apache.mesos.mini.mesos.MesosClusterConfig;
 import org.junit.Test;
 
 import java.io.InputStream;
-import java.util.List;
+import java.util.Collection;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.TimeUnit;
+import java.util.stream.Collectors;
 
 import static org.junit.Assert.assertTrue;
 
@@ -27,6 +33,8 @@ public class SchedulerMainSystemTest {
             .privateRegistryPort(15000) // Currently you have to choose an available port by yourself
             .slaveResources(new String[]{"ports(*):[9200-9200,9300-9300]", "ports(*):[9201-9201,9301-9301]", "ports(*):[9202-9202,9302-9302]"})
             .build();
+
+    private static final Logger LOGGER = Logger.getLogger(SchedulerMainSystemTest.class);
 
     @Test
     public void ensureMainFailsIfNoHeap() throws Exception {
@@ -70,41 +78,32 @@ public class SchedulerMainSystemTest {
         assertTrue(log.contains("Invalid initial heap size"));
     }
 
-
-
     @Test
-    public void ensureMainWorksIfValidHeap() throws Exception {
-        final String schedulerImage = "mesos/elasticsearch-scheduler";
-        CreateContainerCmd createCommand = CONFIG.dockerClient
-                .createContainerCmd(schedulerImage)
-                .withEnv("JAVA_OPTS=-Xms128m -Xmx256m")
-                .withCmd(ZookeeperCLIParameter.ZOOKEEPER_MESOS_URL, "zk://" + "noIP" + ":2181/mesos", ElasticsearchCLIParameter.ELASTICSEARCH_NODES, "3", Configuration.ELASTICSEARCH_RAM, "256");
-
-        CreateContainerResponse r = createCommand.exec();
-        String containerId = r.getId();
-        StartContainerCmd startMesosClusterContainerCmd = CONFIG.dockerClient.startContainerCmd(containerId);
-        startMesosClusterContainerCmd.exec();
-        Awaitility.await().atMost(5, TimeUnit.SECONDS).until(() -> {
-            List<Container> containers = CONFIG.dockerClient.listContainersCmd().exec();
-            return !containers.isEmpty();
-        });
-        List<Container> containers = CONFIG.dockerClient.listContainersCmd().exec();
-        Boolean containerExists = containers.stream().anyMatch(c -> c.getId().equals(containerId));
-        assertTrue(containerExists);
+    public void ensureMainWorksIfStartingSingleScheduler() throws Exception {
+        ensureMainWorksIfStartingSchedulersWithIds("framework1");
     }
 
     @Test
     public void ensureMainWorksIfStartingTwoSchedulers() throws Exception {
-        String framework1ContainerId = createSchedulerWithFrameworkName("framework1");
-        String framework2ContainerId = createSchedulerWithFrameworkName("framework2");
+        ensureMainWorksIfStartingSchedulersWithIds("framework1", "framework2");
+    }
 
-        CONFIG.dockerClient.startContainerCmd(framework1ContainerId).exec();
-        CONFIG.dockerClient.startContainerCmd(framework2ContainerId).exec();
-
-        Awaitility.await().atMost(15, TimeUnit.SECONDS).until(() -> {
-            List<Container> containers = CONFIG.dockerClient.listContainersCmd().exec();
-            return containers.stream().anyMatch(c -> c.getId().equals(framework1ContainerId)) &&
-                   containers.stream().anyMatch(c -> c.getId().equals(framework2ContainerId));
+    private void ensureMainWorksIfStartingSchedulersWithIds(String... frameworkIds) {
+        Map<String, String> frameworkIdToContainerId = new HashMap<>();
+        for (String frameworkId : frameworkIds) {
+            frameworkIdToContainerId.put(frameworkId, createSchedulerWithFrameworkName(frameworkId));
+        }
+        for (String containerId : frameworkIdToContainerId.values()) {
+            CONFIG.dockerClient.startContainerCmd(containerId).exec();
+        }
+        Awaitility.await().atMost(30, TimeUnit.SECONDS).pollInterval(1, TimeUnit.SECONDS).until(() -> {
+            Collection<String> waitingForContainerIds = frameworkIdToContainerId.values().stream().collect(Collectors.toSet());
+            LOGGER.info("Expecting containers to start: " + waitingForContainerIds);
+            Set<String> startedContainerIds = CONFIG.dockerClient.listContainersCmd().exec().stream().map(Container::getId).collect(Collectors.toSet());
+            LOGGER.info("Containers that have started: " + startedContainerIds.toString());
+            Set<String> notYetStartedContainerIds = CollectionUtils.subtract(waitingForContainerIds, startedContainerIds).stream().collect(Collectors.toSet());
+            LOGGER.info("Not yet started: " + notYetStartedContainerIds.toString());
+            return notYetStartedContainerIds.isEmpty();
         });
     }
 
@@ -113,7 +112,12 @@ public class SchedulerMainSystemTest {
                 .dockerClient
                 .createContainerCmd("mesos/elasticsearch-scheduler")
                 .withEnv("JAVA_OPTS=-Xms128m -Xmx256m")
-                .withCmd("-zk", "zk://" + "noIP" + ":2181/mesos", "-n", "3", "-ram", "256", "--frameworkName", frameworkName)
+                .withCmd(
+                        ZookeeperCLIParameter.ZOOKEEPER_MESOS_URL, "zk://" + "noIP" + ":2181/mesos",
+                        ElasticsearchCLIParameter.ELASTICSEARCH_NODES, "3",
+                        Configuration.ELASTICSEARCH_RAM, "256",
+                        "--frameworkName", frameworkName
+                )
                 .exec()
                 .getId();
     }

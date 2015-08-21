@@ -37,8 +37,13 @@ public abstract class TestBase {
     public TestWatcher watchman = new TestWatcher() {
         @Override
         protected void failed(Throwable e, Description description) {
+            LOGGER.info("TestWatcher.failed was called because: " + description.toString() + ". Shutting down schedulers.");
+
             CLUSTER.stop();
+
+            LOGGER.info("Removing scheduler with id: " + scheduler1.getContainerId());
             scheduler1.remove();
+            LOGGER.info("Removing scheduler with id: " + scheduler2.getContainerId());
             scheduler2.remove();
         }
     };
@@ -56,7 +61,7 @@ public abstract class TestBase {
     private static ElasticsearchSchedulerContainer startSchedulerWithNameAndPort(String name, String port) {
         ElasticsearchSchedulerContainer scheduler = new ElasticsearchSchedulerContainer(CONFIG.dockerClient, CLUSTER.getMesosContainer().getIpAddress(), port, name);
         CLUSTER.addAndStartContainer(scheduler);
-        LOGGER.info("Started Elasticsearch instance \"" + name + "\" on " + scheduler.getIpAddress() + ":" + port);
+        LOGGER.info("Started Elasticsearch instance with framework name \"" + name + "\" running on Docker container with id \"" + scheduler.getContainerId() + "\" listening on " + scheduler.getIpAddress() + ":" + port);
         return scheduler;
     }
 
