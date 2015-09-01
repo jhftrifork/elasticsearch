@@ -109,7 +109,7 @@ public class ElasticsearchExecutor implements Executor {
             }));
 
             taskStatus.setTaskState(taskID, Protos.TaskState.TASK_RUNNING, driver);
-        } catch (InvalidParameterException e) {
+        } catch (InvalidParameterException | MalformedURLException e) {
             taskStatus.setTaskState(taskID, Protos.TaskState.TASK_FAILED, driver);
             LOGGER.error(e);
         }
