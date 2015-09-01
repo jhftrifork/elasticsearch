@@ -22,9 +22,9 @@ public class DataVolumesSystemTest extends TestBase {
 
     @Test
     public void testDataVolumes() {
-        ElasticsearchSchedulerContainer scheduler = getScheduler();
+        ElasticsearchSchedulerContainer scheduler = getScheduler1();
 
-        TasksResponse tasksResponse = new TasksResponse(scheduler.getIpAddress(), NODE_COUNT);
+        TasksResponse tasksResponse = new TasksResponse(scheduler.getIpAddress(), scheduler.getManagementPort(), NODE_COUNT);
 
         List<JSONObject> tasks = tasksResponse.getTasks();
 
