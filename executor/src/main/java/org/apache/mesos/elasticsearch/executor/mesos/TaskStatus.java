@@ -21,8 +21,7 @@ public class TaskStatus {
         if (this.taskId == null) {
             this.taskId = taskId;
             Validate.isTrue(this.taskState == null, "TaskState recorded for a null task ID");
-        }
-        else {
+        } else {
             Validate.isTrue(this.taskId == taskId, "The Elasticsearch executor cannot launch multiple tasks");
         }
 
