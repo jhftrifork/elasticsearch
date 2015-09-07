@@ -14,6 +14,7 @@ import org.junit.runner.Description;
 
 import java.util.List;
 
+import static java.util.Arrays.asList;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
@@ -58,7 +59,7 @@ public class ZookeeperFrameworkSystemTest {
         zookeeper = new ZookeeperContainer(CONFIG.dockerClient);
         CLUSTER.addAndStartContainer(zookeeper);
 
-        scheduler = new ElasticsearchSchedulerContainer(CONFIG.dockerClient, CLUSTER.getMesosContainer().getIpAddress());
+        scheduler = new ElasticsearchSchedulerContainer(CONFIG.dockerClient, CLUSTER.getMesosContainer().getIpAddress(), "8080", "framework-1");
         scheduler.setZookeeperFrameworkUrl("zk://" + zookeeper.getIpAddress() + ":2181");
 
         CLUSTER.addAndStartContainer(scheduler);
@@ -74,7 +75,7 @@ public class ZookeeperFrameworkSystemTest {
     public void testZookeeperFramework() throws UnirestException {
         ElasticsearchSchedulerContainer scheduler = getScheduler();
 
-        TasksResponse tasksResponse = new TasksResponse(scheduler.getIpAddress(), NODE_COUNT);
+        TasksResponse tasksResponse = new TasksResponse(scheduler.getIpAddress(), "8080", NODE_COUNT);
 
         List<JSONObject> tasks = tasksResponse.getTasks();
 
