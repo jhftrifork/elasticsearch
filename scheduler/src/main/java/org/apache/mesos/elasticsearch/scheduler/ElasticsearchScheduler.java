@@ -107,7 +107,7 @@ public class ElasticsearchScheduler implements Scheduler {
         }
         LOGGER.debug("Recieved " + offers.size() + " offers.");
         for (Protos.Offer offer : offers) {
-            List<Protos.TaskInfo> taskList = clusterMonitor.getClusterState().getTaskList();
+            List<Protos.TaskInfo> taskList = clusterState.getTaskList();
             if (taskList.size() == configuration.getElasticsearchNodes()) {
                 LOGGER.info("Declined offer: Mesos already runs " + configuration.getElasticsearchNodes() + " Elasticsearch tasks");
                 driver.declineOffer(offer.getId()); // DCOS certification 05
@@ -141,7 +141,7 @@ public class ElasticsearchScheduler implements Scheduler {
     }
 
     private void killLastStartedExecutor(SchedulerDriver driver) {
-        List<Protos.TaskInfo> taskList = clusterMonitor.getClusterState().getTaskList();
+        List<Protos.TaskInfo> taskList = clusterState.getTaskList();
         Protos.TaskInfo taskInfo = taskList.get(taskList.size() - 1);
         LOGGER.debug("Killing last created task: " + taskInfo.getTaskId());
         driver.killTask(taskInfo.getTaskId());
