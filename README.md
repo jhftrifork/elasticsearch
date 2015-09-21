@@ -40,6 +40,25 @@
 - [x] Fault tolerance
 - [x] Customised ES configuration
 - [X] Configurable data directory
+
+[0.4.2](https://github.com/mesos/elasticsearch/issues?q=is%3Aopen+is%3Aissue+milestone%3A0.4.2)
+- [ ] [Test coverage for healthcheck mechanism bug](#303)
+- [ ] [Executor does not call driver.stop() when killed bug](#293)
+- [ ] [Executor processes are not allocated any resources bug](#227)
+
+[0.5.0](https://github.com/mesos/elasticsearch/issues?q=is%3Aopen+is%3Aissue+milestone%3A0.5)
+- [ ] [Add auth to mini mesos enhancement](#304)
+- [ ] [Support Mesos Framework Authorisation blocked dcos enhancement](#218)
+
+[0.5.1](https://github.com/mesos/elasticsearch/issues?utf8=%E2%9C%93&q=is%3Aopen+is%3Aissue+milestone%3A0.5.1)
+- [ ] Refactoring
+
+[0.6.0](https://github.com/mesos/elasticsearch/issues?q=is%3Aopen+is%3Aissue+milestone%3A0.6)
+- [ ] [Mesos persistent volumes enhancement](#306)
+- [ ] [Upgrade to Mesos 0.23 to support persistent volumes blocked enhancement](#228)
+- [ ] [Faster task recovery with Mesos dynamic reservations blocked](#98)
+
+[Future]
 - [ ] High availability (master, indexer, replica)
 - [ ] Upgrading configuration
 - [ ] Scale cluster horizontally
@@ -47,6 +66,12 @@
 - [ ] Upgrade
 - [ ] Rollback
 - [ ] Snapshot and restore 
+
+Rough timescales:
+- [0.4.2] 22/09/15
+- [0.5.0] 25/09/15
+- [0.5.1] 02/10/15
+- [0.6.0] 09/10/15
 
 ### Blocked features
 
@@ -112,7 +137,7 @@ Other command line options include:
 Usage: (Options preceded by an asterisk are required) [options]
   Options:
     --dataDir
-       The data directory used by Docker volumes in the executors
+       The data directory used by Docker volumes in the executors.
        Default: /var/lib/mesos/slave/elasticsearch
     --elasticsearchClusterName
        Name of the elasticsearch cluster
@@ -159,6 +184,10 @@ Usage: (Options preceded by an asterisk are required) [options]
     --frameworkName
        The name given to the framework.
        Default: elasticsearch
+    --frameworkRole
+       Used to group frameworks for allocation decisions, depending on the
+       allocation policy being used.
+       Default: *
     --webUiPort
        TCP port for web ui interface.
        Default: 31100
@@ -180,15 +209,21 @@ Usage: (Options preceded by an asterisk are required) [options]
 
 The web based user interface is available on port 31100 of the scheduler by default. It displays real time information about the tasks running in the cluster and a basic configuration overview of the cluster. 
 
-The user interface uses REST API of the Elasticsearch Mesos Framework. You can find the API documentation here: [docs.elasticsearchmesosui.apiary.io](http://docs.elasticsearchmesosui.apiary.io/).
+The user interface uses REST API of the Elasticsearch Mesos Framework. You can find the API documentation here: [docs.elasticsearchmesos.apiary.io](http://docs.elasticsearchmesos.apiary.io/).
 
 #### Cluster Overview
 
-![Tasks List](docs/screenshot-cluster.png)
+![Cluster Overview](docs/screenshot-cluster.png)
 
-Cluster overview page shows on the top the number of Elasticsearch nodes in the cluster, the overall amount of RAM and disk space allocated by the cluster. State of individual nodes is displayed in a bar, one color representing each state and the percentage of nodes being in this state.
+Cluster page shows on the top the number of Elasticsearch nodes in the cluster, the overall amount of RAM and disk space allocated by the cluster. State of individual nodes is displayed in a bar, one color representing each state and the percentage of nodes being in this state.
 
-Below you can find Configuration Overview section and Query Browser, that allows you to examine data stored on individual Elasticsearch nodes.
+Below you can see Performance Overview with the following metrics over time: number of indices, number of shards, number of documents in the cluster and the cluster data size.
+
+#### Scaling 
+
+![Scaling](docs/screenshot-scaling.png)
+
+This simple interface allows you to specify a number of nodes to scale to.
 
 #### Tasks List
 
@@ -196,11 +231,23 @@ Below you can find Configuration Overview section and Query Browser, that allows
 
 Tasks list displays detailed information about all tasks in the cluster, not only those currently running, but also tasks being staged, finished or failed. Click through individual tasks to get access to Elasticsearch REST API.
 
+#### Configuration
+
+![Configuration](docs/screenshot-configuration.png)
+
+This is a read-only interface displaying an overview of the framework configuration.
+
+#### Query Browser
+
+![Query Browser](docs/screenshot-query-browser.png)
+
+Query Browser allows you to examine data stored on individual Elasticsearch nodes. In this example we searched for the word "Love" on `slave1` node. You can toggle between tabular view and raw results view mode, which displays the raw data returned from Elasticsearch `/_search` API endpoint.
+
 ### Known issues
 
-- Issue [#206](https://github.com/mesos/elasticsearch/issues/206): The GUI will not represent the true state of the cluster after a scheduler or executor reconciliation event. E.g. If the scheduler is killed and restarted, the GUI will show zero executors, even though there are executors present.
 - Issue [#188](https://github.com/mesos/elasticsearch/issues/188): Database data IS NOT persisted to disk. Data storage is wholly reliant on cluster redundancy. This means that the framework is not yet recommended for production use.
 - Issue [#177](https://github.com/mesos/elasticsearch/issues/177#issuecomment-135367451): Executors keep running if the scheduler is killed unless the DCOS CLI is used.
+- Issue [#93](https://github.com/mesos/elasticsearch/issues/93): Despite the gui, horizontal scaling is not yet implemented.
 
 ## Developers Guide
 
@@ -229,7 +276,7 @@ $ ./gradlew build system-test:main
 ```
 $ docker-machine create -d virtualbox --virtualbox-memory 4096 --virtualbox-cpu-count 2 mesos-es
 $ eval $(docker-machine env mesos-es)
-$ sudo route -n add 172.17.0.0/16 $(docker-machine ip mesos-es)
+$ sudo route delete 172.17.0.0/16; sudo route -n add 172.17.0.0/16 $(docker-machine ip mesos-es)
 $ ./gradlew build system-test:main
 ```
 
@@ -259,32 +306,15 @@ $ ./gradlew -DsystemTest.single=DiscoverySystemTest system-test:systemTest
 
 1 First update the CHANGELOG.md by listing fixed issues and bugs
 
-2 Create the following Gradle property file in ~/.gradle/gradle.properties and refer to your Github and Docker Hub
-user/pass.
+2 Update the version number in the Configuration.class so that the Web UI shows the correct version number.
 
-```
-systemProp.org.ajoberstar.grgit.auth.interactive.allow=false
-systemProp.org.ajoberstar.grgit.auth.ssh.private=~/.ssh/id_rsa
-systemProp.org.ajoberstar.grgit.auth.username=user
-systemProp.org.ajoberstar.grgit.auth.password=password
-dockerHubUsername=user
-dockerHubPassword=******
-dockerHubEmail=email
-```
+3 Push changes
 
-3 Update the version number in the Configuration.class so that the Web UI shows the correct version number.
+4 Verify that the [Continuous Build Pipeline](https://ci.infra.container-solutions.com/) completes successfully.
 
-4 Build and make sure the system tests pass (skip if you have tested on jenkins)
+5 Run the [Release Build](https://ci.infra.container-solutions.com/view/Mesos%20Elasticsearch/job/Elasticsearch%20Release/) and pick a release type: patch, minor or major.
 
-```
-$ ./gradlew build system-test:systemTest
-```
-
-5 Now perform a release and specify the release type: major, minor or patch (only one!) and your username.
-
-```
-$ ./gradlew release -PreleaseType={major OR minor OR patch} -PuserName={user}
-```
+6 Done!
 
 ## Support
 

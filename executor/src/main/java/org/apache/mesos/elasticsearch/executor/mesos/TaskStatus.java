@@ -45,7 +45,7 @@ public class TaskStatus {
     }
 
     public Protos.TaskStatus killed() {
-        LOGGER.info("TASK_KILLED");
+        LOGGER.info(Protos.TaskState.TASK_KILLED.toString());
         return getTaskStatus(Protos.TaskState.TASK_KILLED);
     }
 

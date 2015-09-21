@@ -22,6 +22,7 @@ import java.util.List;
 /**
  * Executor for Elasticsearch.
  */
+@SuppressWarnings("PMD.TooManyMethods")
 public class ElasticsearchExecutor implements Executor {
     private final Launcher launcher;
     public static final Logger LOGGER = Logger.getLogger(ElasticsearchExecutor.class.getCanonicalName());
@@ -91,7 +92,7 @@ public class ElasticsearchExecutor implements Executor {
             LOGGER.debug(launcher.toString());
 
             // Launch Node
-            node = launcher.launch();
+            final Node node = launcher.launch();
 
             // Send status update, running
             driver.sendStatusUpdate(taskStatus.running());
@@ -104,9 +105,9 @@ public class ElasticsearchExecutor implements Executor {
     @Override
     public void killTask(ExecutorDriver driver, Protos.TaskID taskId) {
         LOGGER.info("Kill task: " + taskId.getValue());
-        node.close();
-        driver.sendStatusUpdate(taskStatus.finished());
-        driver.stop();
+        driver.sendStatusUpdate(taskStatus.failed());
+        stopNode();
+        stopDriver(driver, taskStatus.killed());
     }
 
     @Override
@@ -123,13 +124,25 @@ public class ElasticsearchExecutor implements Executor {
     @Override
     public void shutdown(ExecutorDriver driver) {
         LOGGER.info("Shutting down framework...");
-        node.close();
-        driver.sendStatusUpdate(taskStatus.finished());
-        driver.stop();
+        stopNode();
+        stopDriver(driver, taskStatus.finished());
     }
 
     @Override
     public void error(ExecutorDriver driver, String message) {
         LOGGER.info("Error in executor: " + message);
+        stopNode();
+        stopDriver(driver, taskStatus.error());
+    }
+
+    private void stopDriver(ExecutorDriver driver, Protos.TaskStatus reason) {
+        driver.sendStatusUpdate(reason);
+        driver.stop();
+    }
+
+    private void stopNode() {
+        if (node != null) {
+            node.close();
+        }
     }
 }

@@ -8,10 +8,16 @@ import org.apache.mesos.SchedulerDriver;
 import org.apache.mesos.elasticsearch.common.Discovery;
 import org.apache.mesos.elasticsearch.scheduler.cluster.ClusterMonitor;
 import org.apache.mesos.elasticsearch.scheduler.state.ClusterState;
+import org.apache.mesos.elasticsearch.scheduler.state.ESTaskStatus;
 import org.apache.mesos.elasticsearch.scheduler.state.FrameworkState;
+import org.apache.mesos.elasticsearch.scheduler.state.StatePath;
 
 import java.net.InetSocketAddress;
-import java.util.*;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Observable;
 
 /**
  * Scheduler for Elasticsearch.
@@ -32,6 +38,7 @@ public class ElasticsearchScheduler implements Scheduler {
     Map<String, Task> tasks = new HashMap<>();
     private Observable statusUpdateWatchers = new StatusUpdateObservable();
     private Boolean registered = false;
+    private ClusterState clusterState;
 
     public ElasticsearchScheduler(Configuration configuration, TaskInfoFactory taskInfoFactory) {
         this.configuration = configuration;
@@ -39,14 +46,18 @@ public class ElasticsearchScheduler implements Scheduler {
     }
 
     public Map<String, Task> getTasks() {
-        return tasks;
+        if (clusterState == null) {
+            return new HashMap<>();
+        } else {
+            return clusterState.getGuiTaskList();
+        }
     }
 
     public void run() {
         LOGGER.info("Starting ElasticSearch on Mesos - [numHwNodes: " + configuration.getElasticsearchNodes() +
-                    ", zk mesos: " + configuration.getMesosZKURL() +
-                    ", zk framework: " + configuration.getFrameworkZKURL() +
-                    ", ram:" + configuration.getMem() + "]");
+                ", zk mesos: " + configuration.getMesosZKURL() +
+                ", zk framework: " + configuration.getFrameworkZKURL() +
+                ", ram:" + configuration.getMem() + "]");
 
         FrameworkInfoFactory frameworkInfoFactory = new FrameworkInfoFactory(configuration);
         final Protos.FrameworkInfo.Builder frameworkBuilder = frameworkInfoFactory.getBuilder();
@@ -64,8 +75,10 @@ public class ElasticsearchScheduler implements Scheduler {
 
         LOGGER.info("Framework registered as " + frameworkId.getValue());
 
-        ClusterState clusterState = new ClusterState(configuration.getState(), frameworkState); // Must use new framework state. This is when we are allocated our FrameworkID.
-        clusterMonitor = new ClusterMonitor(configuration, this, driver, clusterState);
+        clusterState = new ClusterState(configuration.getState(), frameworkState); // Must use new framework state. This is when we are allocated our FrameworkID.
+        clusterMonitor = new ClusterMonitor(configuration, this, driver, new StatePath(configuration.getState()));
+        clusterState.getTaskList().forEach(clusterMonitor::startMonitoringTask); // Get all previous executors and start monitoring them.
+        statusUpdateWatchers.addObserver(clusterState);
         statusUpdateWatchers.addObserver(clusterMonitor);
 
         List<Protos.Resource> resources = Resources.buildFrameworkResources(configuration);
@@ -120,16 +133,9 @@ public class ElasticsearchScheduler implements Scheduler {
                 Protos.TaskInfo taskInfo = taskInfoFactory.createTask(configuration, offer);
                 LOGGER.debug(taskInfo.toString());
                 driver.launchTasks(Collections.singleton(offer.getId()), Collections.singleton(taskInfo));
-                Task task = new Task(
-                        offer.getHostname(),
-                        taskInfo.getTaskId().getValue(),
-                        Protos.TaskState.TASK_STAGING,
-                        clock.zonedNow(),
-                        new InetSocketAddress(offer.getHostname(), taskInfo.getDiscovery().getPorts().getPorts(Discovery.CLIENT_PORT_INDEX).getNumber()),
-                        new InetSocketAddress(offer.getHostname(), taskInfo.getDiscovery().getPorts().getPorts(Discovery.TRANSPORT_PORT_INDEX).getNumber())
-                );
-                tasks.put(taskInfo.getTaskId().getValue(), task);
-                clusterMonitor.monitorTask(taskInfo); // Add task to cluster monitor
+                ESTaskStatus esTask = new ESTaskStatus(configuration.getState(), configuration.getFrameworkId(), taskInfo, new StatePath(configuration.getState())); // Write staging state to zk
+                clusterState.addTask(esTask); // Add tasks to cluster state and write to zk
+                clusterMonitor.startMonitoringTask(esTask); // Add task to cluster monitor
             }
         }
     }
@@ -142,17 +148,17 @@ public class ElasticsearchScheduler implements Scheduler {
     }
 
     private boolean isEnoughDisk(List<Protos.Resource> resourcesList) {
-        ResourceCheck resourceCheck = new ResourceCheck(Resources.disk(0).getName());
+        ResourceCheck resourceCheck = new ResourceCheck(Resources.RESOURCE_DISK);
         return resourceCheck.isEnough(resourcesList, configuration.getDisk());
     }
 
     private boolean isEnoughCPU(List<Protos.Resource> resourcesList) {
-        ResourceCheck resourceCheck = new ResourceCheck(Resources.cpus(0).getName());
+        ResourceCheck resourceCheck = new ResourceCheck(Resources.RESOURCE_CPUS);
         return resourceCheck.isEnough(resourcesList, configuration.getCpus());
     }
 
     private boolean isEnoughRAM(List<Protos.Resource> resourcesList) {
-        ResourceCheck resourceCheck = new ResourceCheck(Resources.mem(0).getName());
+        ResourceCheck resourceCheck = new ResourceCheck(Resources.RESOURCE_MEM);
         return resourceCheck.isEnough(resourcesList, configuration.getMem());
     }
 
@@ -203,7 +209,7 @@ public class ElasticsearchScheduler implements Scheduler {
 
     private boolean isHostAlreadyRunningTask(Protos.Offer offer) {
         Boolean result = false;
-        List<Protos.TaskInfo> stateList = clusterMonitor.getClusterState().getTaskList();
+        List<Protos.TaskInfo> stateList = clusterState.getTaskList();
         for (Protos.TaskInfo t : stateList) {
             if (t.getSlaveId().equals(offer.getSlaveId())) {
                 result = true;
